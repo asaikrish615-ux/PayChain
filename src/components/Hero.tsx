@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Wallet, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export const Hero = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden px-4">
       {/* Animated Background */}
@@ -32,6 +35,7 @@ export const Hero = () => {
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Button 
             size="lg" 
+            onClick={() => navigate("/auth")}
             className="bg-gradient-primary text-primary-foreground hover:opacity-90 transition-all hover:scale-105 hover:shadow-glow group"
           >
             <Wallet className="mr-2 h-5 w-5" />
@@ -42,9 +46,10 @@ export const Hero = () => {
           <Button 
             size="lg" 
             variant="outline"
+            onClick={() => navigate("/dashboard")}
             className="border-primary/50 hover:bg-primary/10 hover:border-primary transition-all"
           >
-            Learn More
+            View Dashboard
           </Button>
         </div>
 
