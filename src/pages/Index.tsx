@@ -1,6 +1,7 @@
 import { Hero } from "@/components/Hero";
 import { Features } from "@/components/Features";
 import { WalletDashboard } from "@/components/WalletDashboard";
+import { AIChat } from "@/components/AIChat";
 
 const Index = () => {
   return (
@@ -8,6 +9,7 @@ const Index = () => {
       <Hero />
       <Features />
       <WalletDashboard />
+      <AIChat />
     </div>
   );
 };

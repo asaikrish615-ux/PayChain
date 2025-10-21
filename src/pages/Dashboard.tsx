@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Plus } from "lucide-react";
 import { WalletDashboard } from "@/components/WalletDashboard";
 import { Features } from "@/components/Features";
+import { AIChat } from "@/components/AIChat";
 
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
@@ -75,6 +76,9 @@ export default function Dashboard() {
       {/* Dashboard Content */}
       <WalletDashboard />
       <Features />
+      
+      {/* AI Chat Assistant */}
+      <AIChat />
     </div>
   );
 }
