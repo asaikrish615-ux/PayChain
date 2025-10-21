@@ -14,7 +14,171 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      exchange_rates: {
+        Row: {
+          from_currency: string
+          id: string
+          last_updated: string
+          rate: number
+          to_currency: string
+        }
+        Insert: {
+          from_currency: string
+          id?: string
+          last_updated?: string
+          rate: number
+          to_currency: string
+        }
+        Update: {
+          from_currency?: string
+          id?: string
+          last_updated?: string
+          rate?: number
+          to_currency?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          phone_number: string | null
+          updated_at: string
+          upi_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone_number?: string | null
+          updated_at?: string
+          upi_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone_number?: string | null
+          updated_at?: string
+          upi_id?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          completed_at: string | null
+          created_at: string
+          crypto_amount: number | null
+          crypto_currency: string | null
+          currency: string
+          fee: number | null
+          from_wallet_id: string | null
+          id: string
+          notes: string | null
+          recipient_name: string | null
+          recipient_upi: string | null
+          status: Database["public"]["Enums"]["transaction_status"]
+          to_wallet_id: string | null
+          transaction_hash: string | null
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          completed_at?: string | null
+          created_at?: string
+          crypto_amount?: number | null
+          crypto_currency?: string | null
+          currency: string
+          fee?: number | null
+          from_wallet_id?: string | null
+          id?: string
+          notes?: string | null
+          recipient_name?: string | null
+          recipient_upi?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          to_wallet_id?: string | null
+          transaction_hash?: string | null
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          completed_at?: string | null
+          created_at?: string
+          crypto_amount?: number | null
+          crypto_currency?: string | null
+          currency?: string
+          fee?: number | null
+          from_wallet_id?: string | null
+          id?: string
+          notes?: string | null
+          recipient_name?: string | null
+          recipient_upi?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          to_wallet_id?: string | null
+          transaction_hash?: string | null
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_from_wallet_id_fkey"
+            columns: ["from_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_to_wallet_id_fkey"
+            columns: ["to_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          balance: number
+          created_at: string
+          currency: string
+          id: string
+          is_primary: boolean | null
+          updated_at: string
+          user_id: string
+          wallet_address: string | null
+          wallet_type: Database["public"]["Enums"]["wallet_type"]
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          currency: string
+          id?: string
+          is_primary?: boolean | null
+          updated_at?: string
+          user_id: string
+          wallet_address?: string | null
+          wallet_type: Database["public"]["Enums"]["wallet_type"]
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          is_primary?: boolean | null
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string | null
+          wallet_type?: Database["public"]["Enums"]["wallet_type"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +187,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      transaction_status: "pending" | "completed" | "failed" | "cancelled"
+      transaction_type: "send" | "receive" | "exchange" | "buy" | "sell"
+      wallet_type: "crypto" | "upi" | "fiat"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +316,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      transaction_status: ["pending", "completed", "failed", "cancelled"],
+      transaction_type: ["send", "receive", "exchange", "buy", "sell"],
+      wallet_type: ["crypto", "upi", "fiat"],
+    },
   },
 } as const
