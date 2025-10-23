@@ -33,19 +33,19 @@ export const WalletDashboard = () => {
   ];
 
   return (
-    <section className="py-32 px-4 relative">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
+    <section className="relative">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl md:text-4xl font-bold mb-3">
             Your <span className="gradient-text">Unified</span> Wallet
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-muted-foreground">
             Manage crypto and fiat in one beautiful interface
           </p>
         </div>
 
         {/* Balance Card */}
-        <div className="glass-card p-8 rounded-3xl mb-8 hover:shadow-glow-secondary transition-all">
+        <div className="glass-card p-8 rounded-3xl mb-8 hover:shadow-glow-secondary transition-all animate-scale-in">
           <div className="flex items-center justify-between mb-8">
             <div>
               <p className="text-sm text-muted-foreground mb-2">Total Balance</p>
@@ -59,7 +59,7 @@ export const WalletDashboard = () => {
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowBalance(!showBalance)}
-                  className="hover:bg-primary/10"
+                  className="hover:bg-primary/10 hover:scale-110 transition-all"
                 >
                   {showBalance ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </Button>
@@ -72,13 +72,13 @@ export const WalletDashboard = () => {
             <div className="flex gap-3">
               <Button 
                 size="icon" 
-                className="h-14 w-14 rounded-full bg-gradient-primary hover:opacity-90 hover:scale-110 transition-all"
+                className="h-14 w-14 rounded-full bg-gradient-primary hover:opacity-90 hover:scale-110 transition-all shadow-lg"
               >
                 <ArrowUpRight className="h-6 w-6" />
               </Button>
               <Button 
                 size="icon" 
-                className="h-14 w-14 rounded-full bg-gradient-primary hover:opacity-90 hover:scale-110 transition-all"
+                className="h-14 w-14 rounded-full bg-gradient-primary hover:opacity-90 hover:scale-110 transition-all shadow-lg"
               >
                 <ArrowDownLeft className="h-6 w-6" />
               </Button>
@@ -93,15 +93,15 @@ export const WalletDashboard = () => {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-primary/10 rounded-2xl p-4 border border-primary/20">
+            <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-4 border border-primary/20 hover:scale-105 transition-transform">
               <p className="text-sm text-muted-foreground mb-1">Crypto Assets</p>
               <p className="text-2xl font-bold text-primary">₹1,00,000</p>
             </div>
-            <div className="bg-secondary/10 rounded-2xl p-4 border border-secondary/20">
+            <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-2xl p-4 border border-secondary/20 hover:scale-105 transition-transform">
               <p className="text-sm text-muted-foreground mb-1">UPI Balance</p>
               <p className="text-2xl font-bold text-secondary">₹45,680</p>
             </div>
-            <div className="bg-accent/10 rounded-2xl p-4 border border-accent/20">
+            <div className="bg-gradient-to-br from-accent/10 to-accent/5 rounded-2xl p-4 border border-accent/20 hover:scale-105 transition-transform">
               <p className="text-sm text-muted-foreground mb-1">Monthly Gain</p>
               <p className="text-2xl font-bold text-accent">+12.5%</p>
             </div>
@@ -112,7 +112,9 @@ export const WalletDashboard = () => {
         <div>
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-2xl font-bold">Recent Activity</h3>
-            <Button variant="link" className="text-primary">View All</Button>
+            <Button variant="link" className="text-primary hover:scale-105 transition-transform">
+              View All
+            </Button>
           </div>
 
           <div className="space-y-4">
