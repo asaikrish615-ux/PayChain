@@ -1,22 +1,23 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface PaymentRequest {
-  amount: number;
-  currency: string;
-  fromWalletId: string;
-  toWalletId?: string;
-  recipientUpi?: string;
-  recipientName?: string;
-  transactionType: 'send' | 'receive' | 'exchange';
-  cryptoAmount?: number;
-  cryptoCurrency?: string;
-}
+const PaymentSchema = z.object({
+  amount: z.number().positive().max(1000000).finite(),
+  currency: z.enum(['INR', 'USD', 'EUR', 'ETH', 'BTC', 'USDT']),
+  fromWalletId: z.string().uuid(),
+  toWalletId: z.string().uuid().optional(),
+  recipientUpi: z.string().max(100).optional(),
+  recipientName: z.string().max(100).optional(),
+  transactionType: z.enum(['send', 'receive', 'exchange']),
+  cryptoAmount: z.number().positive().max(1000).finite().optional(),
+  cryptoCurrency: z.enum(['ETH', 'BTC', 'USDT']).optional(),
+});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -45,7 +46,9 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const paymentRequest: PaymentRequest = await req.json();
+    // Validate and parse payment request
+    const requestBody = await req.json();
+    const paymentRequest = PaymentSchema.parse(requestBody);
     console.log('Processing payment:', paymentRequest);
 
     // Calculate fee (0.1%)

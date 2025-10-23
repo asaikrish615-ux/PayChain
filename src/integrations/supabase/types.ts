@@ -184,7 +184,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_wallet_balance: {
+        Args: { amount_change: number; wallet_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       transaction_status: "pending" | "completed" | "failed" | "cancelled"
