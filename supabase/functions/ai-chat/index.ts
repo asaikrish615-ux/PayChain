@@ -91,10 +91,11 @@ Be concise, friendly, and helpful. Use emojis occasionally to make conversations
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {
-    console.error("Chat error:", error);
+    console.error('Error in ai-chat function:', error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
+        error: 'An error occurred while processing your request. Please try again.',
+        code: 'AI_CHAT_ERROR'
       }),
       {
         status: 500,

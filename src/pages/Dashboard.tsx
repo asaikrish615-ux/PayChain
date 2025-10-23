@@ -1,55 +1,40 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { LogOut, Plus } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { WalletDashboard } from "@/components/WalletDashboard";
 import { Features } from "@/components/Features";
 import { AIChat } from "@/components/AIChat";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
-export default function Dashboard() {
+function DashboardContent() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user);
-      } else {
-        navigate("/auth");
       }
-      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session) {
           setUser(session.user);
-        } else {
-          navigate("/auth");
         }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/");
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-2xl gradient-text">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -59,7 +44,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-2xl font-bold gradient-text">PayChain</h1>
             <p className="text-sm text-muted-foreground">
-              Welcome back, {user.user_metadata?.full_name || user.email}!
+              Welcome back, {user?.user_metadata?.full_name || user?.email}!
             </p>
           </div>
           <Button
@@ -80,5 +65,13 @@ export default function Dashboard() {
       {/* AI Chat Assistant */}
       <AIChat />
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }

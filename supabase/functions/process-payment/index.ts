@@ -127,14 +127,28 @@ serve(async (req) => {
     );
   } catch (error: any) {
     console.error('Payment processing error:', error);
+    
+    // Map to safe, generic error messages
+    let safeMessage = 'Payment processing failed. Please try again.';
+    let statusCode = 400;
+    
+    if (error.message?.toLowerCase().includes('unauthorized')) {
+      safeMessage = 'Authentication required';
+      statusCode = 401;
+    } else if (error.message?.toLowerCase().includes('insufficient')) {
+      safeMessage = 'Insufficient balance';
+      statusCode = 400;
+    }
+    
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: safeMessage,
+        code: 'PAYMENT_FAILED'
       }),
       {
+        status: statusCode,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
       }
     );
   }

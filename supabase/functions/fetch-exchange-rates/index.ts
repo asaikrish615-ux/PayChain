@@ -65,15 +65,16 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error('Error fetching exchange rates:', error);
+    console.error('Error in fetch-exchange-rates function:', error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message,
+      JSON.stringify({ 
+        success: false, 
+        error: 'Failed to update exchange rates. Please try again later.',
+        code: 'RATE_UPDATE_FAILED'
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
