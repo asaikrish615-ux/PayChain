@@ -9,7 +9,7 @@ import { Features } from "@/components/Features";
 import { AIChat } from "@/components/AIChat";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Portfolio } from "@/components/Portfolio";
-import { User as UserIcon } from "lucide-react";
+import { User as UserIcon, History } from "lucide-react";
 
 function DashboardContent() {
   const [user, setUser] = useState<User | null>(null);
@@ -66,6 +66,14 @@ function DashboardContent() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/history")}
+              className="hover:bg-primary/10 transition-all hover:scale-105"
+            >
+              <History className="h-5 w-5" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
