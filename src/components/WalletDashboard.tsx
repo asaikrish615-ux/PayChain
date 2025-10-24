@@ -1,36 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight, ArrowDownLeft, RefreshCcw, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
-import { TransactionCard } from "./TransactionCard";
 
 export const WalletDashboard = () => {
   const [showBalance, setShowBalance] = useState(true);
-
-  const transactions = [
-    {
-      type: "received" as const,
-      amount: "₹5,200",
-      crypto: "0.0654 ETH",
-      from: "Rajesh Kumar",
-      time: "2 min ago",
-      status: "completed" as const,
-    },
-    {
-      type: "sent" as const,
-      amount: "₹12,450",
-      crypto: "0.156 ETH",
-      to: "Priya Sharma",
-      time: "1 hour ago",
-      status: "completed" as const,
-    },
-    {
-      type: "exchange" as const,
-      amount: "₹8,900",
-      crypto: "0.112 ETH → ₹8,900",
-      time: "3 hours ago",
-      status: "completed" as const,
-    },
-  ];
 
   return (
     <section className="relative">
@@ -45,7 +18,7 @@ export const WalletDashboard = () => {
         </div>
 
         {/* Balance Card */}
-        <div className="glass-card p-8 rounded-3xl mb-8 hover:shadow-glow-secondary transition-all animate-scale-in">
+        <div className="glass-card p-8 rounded-3xl hover:shadow-glow-secondary transition-all animate-scale-in">
           <div className="flex items-center justify-between mb-8">
             <div>
               <p className="text-sm text-muted-foreground mb-2">Total Balance</p>
@@ -105,22 +78,6 @@ export const WalletDashboard = () => {
               <p className="text-sm text-muted-foreground mb-1">Monthly Gain</p>
               <p className="text-2xl font-bold text-accent">+12.5%</p>
             </div>
-          </div>
-        </div>
-
-        {/* Recent Transactions */}
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold">Recent Activity</h3>
-            <Button variant="link" className="text-primary hover:scale-105 transition-transform">
-              View All
-            </Button>
-          </div>
-
-          <div className="space-y-4">
-            {transactions.map((transaction, index) => (
-              <TransactionCard key={index} {...transaction} />
-            ))}
           </div>
         </div>
       </div>
