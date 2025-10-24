@@ -13,6 +13,7 @@ import { Portfolio } from "@/components/Portfolio";
 
 function DashboardContent() {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,6 +21,7 @@ function DashboardContent() {
       if (session) {
         setUser(session.user);
       }
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -27,6 +29,7 @@ function DashboardContent() {
         if (session) {
           setUser(session.user);
         }
+        setLoading(false);
       }
     );
 
@@ -37,6 +40,14 @@ function DashboardContent() {
     await supabase.auth.signOut();
     navigate("/");
   };
+
+  if (loading || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,7 +80,7 @@ function DashboardContent() {
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
         {/* Profile and Portfolio Section at Top */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <UserProfile user={user!} />
+          <UserProfile user={user} />
           <Portfolio />
         </div>
 
