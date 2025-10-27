@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { WalletDashboard } from "@/components/WalletDashboard";
 import { Features } from "@/components/Features";
+import { Services } from "@/components/Services";
 import { AIChat } from "@/components/AIChat";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Portfolio } from "@/components/Portfolio";
@@ -101,6 +102,9 @@ function DashboardContent() {
 
         {/* Wallet Dashboard */}
         <WalletDashboard />
+
+        {/* Services Section */}
+        <Services />
 
         {/* Features Section */}
         <Features />
