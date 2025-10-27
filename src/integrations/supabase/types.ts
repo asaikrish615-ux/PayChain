@@ -68,6 +68,47 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          new_status: Database["public"]["Enums"]["transaction_status"] | null
+          notes: string | null
+          old_status: Database["public"]["Enums"]["transaction_status"] | null
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["transaction_status"] | null
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["transaction_status"] | null
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["transaction_status"] | null
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["transaction_status"] | null
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_audit_log_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
@@ -184,6 +225,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      complete_transaction: {
+        Args: { transaction_id: string }
+        Returns: undefined
+      }
+      fail_transaction: {
+        Args: { failure_reason: string; transaction_id: string }
+        Returns: undefined
+      }
       update_wallet_balance: {
         Args: { amount_change: number; wallet_id: string }
         Returns: undefined

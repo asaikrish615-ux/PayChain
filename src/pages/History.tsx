@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, Filter, Download } from "lucide-react";
+import { ArrowLeft, LogOut, Download, Loader2 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TransactionCard } from "@/components/TransactionCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 
 interface Transaction {
   id: string;
@@ -52,19 +53,27 @@ function HistoryContent() {
   }, []);
 
   const fetchTransactions = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("transactions")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(50);
+    try {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-    if (error) {
-      console.error("Error fetching transactions:", error);
-      return;
+      if (error) {
+        console.error("Error fetching transactions:", error);
+        toast.error("Failed to load transactions", {
+          description: "Please try refreshing the page"
+        });
+        return;
+      }
+
+      setTransactions(data || []);
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error("Failed to load transactions");
     }
-
-    setTransactions(data || []);
   };
 
   const handleSignOut = async () => {
@@ -84,7 +93,10 @@ function HistoryContent() {
   if (loading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading transactions...</p>
+        </div>
       </div>
     );
   }

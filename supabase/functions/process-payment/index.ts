@@ -80,36 +80,92 @@ serve(async (req) => {
       throw transactionError;
     }
 
-    // Simulate payment processing
-    // In a real app, this would integrate with blockchain and UPI APIs
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('Transaction created, starting payment processing:', transaction.id);
 
-    // Update transaction status to completed
-    const { error: updateError } = await supabaseClient
-      .from('transactions')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-      })
-      .eq('id', transaction.id);
+    // Step 3: Pre-validate wallet balance before processing
+    console.log('Validating wallet balance...');
+    if (paymentRequest.transactionType === 'send') {
+      const { data: wallet, error: walletError } = await supabaseClient
+        .from('wallets')
+        .select('balance')
+        .eq('id', paymentRequest.fromWalletId)
+        .single();
 
-    if (updateError) {
-      console.error('Transaction update error:', updateError);
-      throw updateError;
+      if (walletError || !wallet) {
+        console.error('Wallet fetch error:', walletError);
+        
+        // Mark transaction as failed
+        const { error: failError } = await supabaseClient.rpc('fail_transaction', {
+          transaction_id: transaction.id,
+          failure_reason: 'Wallet not found'
+        });
+        
+        if (failError) {
+          console.error('Failed to mark transaction as failed:', failError);
+        }
+        
+        throw new Error('Wallet not found');
+      }
+
+      const totalAmount = paymentRequest.amount + fee;
+      if (wallet.balance < totalAmount) {
+        console.log(`Insufficient balance: ${wallet.balance} < ${totalAmount}`);
+        
+        // Mark transaction as failed
+        const { error: failError } = await supabaseClient.rpc('fail_transaction', {
+          transaction_id: transaction.id,
+          failure_reason: 'Insufficient balance'
+        });
+        
+        if (failError) {
+          console.error('Failed to mark transaction as failed:', failError);
+        }
+        
+        throw new Error('Insufficient balance');
+      }
     }
 
-    // Update wallet balances
+    // Step 4: Deduct balance FIRST (before marking as completed)
+    console.log('Deducting balance from wallet...');
     if (paymentRequest.transactionType === 'send') {
-      // Deduct from sender's wallet
-      const { error: deductError } = await supabaseClient
-        .rpc('update_wallet_balance', {
-          wallet_id: paymentRequest.fromWalletId,
-          amount_change: -(paymentRequest.amount + fee),
-        });
+      const { error: deductError } = await supabaseClient.rpc('update_wallet_balance', {
+        wallet_id: paymentRequest.fromWalletId,
+        amount_change: -(paymentRequest.amount + fee),
+      });
 
       if (deductError) {
-        console.error('Wallet deduction error:', deductError);
+        console.error('Balance deduction failed:', deductError);
+        
+        // Mark transaction as failed
+        const { error: failError } = await supabaseClient.rpc('fail_transaction', {
+          transaction_id: transaction.id,
+          failure_reason: `Balance deduction failed: ${deductError.message}`
+        });
+        
+        if (failError) {
+          console.error('Failed to mark transaction as failed:', failError);
+        }
+        
+        throw new Error('Insufficient balance or wallet locked');
       }
+      console.log('Balance deducted successfully');
+    }
+
+    // Step 5: Simulate payment processing (blockchain/UPI confirmation)
+    console.log('Processing payment confirmation...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Step 6: ONLY NOW mark transaction as completed
+    console.log('Marking transaction as completed...');
+    const { error: completeError } = await supabaseClient.rpc('complete_transaction', {
+      transaction_id: transaction.id
+    });
+
+    if (completeError) {
+      console.error('CRITICAL: Balance deducted but transaction completion failed:', completeError);
+      // This is a critical error - balance was deducted but transaction not marked complete
+      // In production, this should trigger alerts and manual intervention
+      throw new Error('Transaction completion failed - please contact support');
     }
 
     console.log('Payment processed successfully:', transaction.id);
@@ -128,16 +184,25 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Payment processing error:', error);
     
-    // Map to safe, generic error messages
+    // Provide safe, user-friendly error messages
     let safeMessage = 'Payment processing failed. Please try again.';
-    let statusCode = 400;
+    let statusCode = 500;
     
     if (error.message?.toLowerCase().includes('unauthorized')) {
       safeMessage = 'Authentication required';
       statusCode = 401;
-    } else if (error.message?.toLowerCase().includes('insufficient')) {
-      safeMessage = 'Insufficient balance';
+    } else if (error.message?.toLowerCase().includes('insufficient balance')) {
+      safeMessage = 'Insufficient balance in wallet';
       statusCode = 400;
+    } else if (error.message?.toLowerCase().includes('wallet not found')) {
+      safeMessage = 'Wallet not found';
+      statusCode = 404;
+    } else if (error.message?.toLowerCase().includes('wallet locked')) {
+      safeMessage = 'Wallet is temporarily locked. Please try again.';
+      statusCode = 409;
+    } else if (error.message?.toLowerCase().includes('contact support')) {
+      safeMessage = 'Transaction error - please contact support';
+      statusCode = 500;
     }
     
     return new Response(
