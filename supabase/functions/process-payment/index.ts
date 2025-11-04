@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { logger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,11 +49,26 @@ serve(async (req) => {
 
     // Validate and parse payment request
     const requestBody = await req.json();
-    const paymentRequest = PaymentSchema.parse(requestBody);
-    console.log('Processing payment:', paymentRequest);
+    const parsedRequest = PaymentSchema.safeParse(requestBody);
+    if (!parsedRequest.success) {
+      logger.error('Invalid payment request', new Error('Validation failed'), {
+        action: 'validate_payment',
+        userId: user.id
+      });
+      return new Response(
+        JSON.stringify({ error: 'Invalid payment request' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Calculate fee (0.1%)
+    const paymentRequest = parsedRequest.data;
     const fee = paymentRequest.amount * 0.001;
+
+    logger.info('Payment processing started', {
+      action: 'process_payment',
+      userId: user.id,
+      transactionType: paymentRequest.transactionType
+    });
 
     // Create transaction record
     const { data: transaction, error: transactionError } = await supabaseClient
@@ -76,14 +92,24 @@ serve(async (req) => {
       .single();
 
     if (transactionError) {
-      console.error('Transaction creation error:', transactionError);
-      throw transactionError;
+      logger.error('Transaction creation failed', transactionError, {
+        action: 'create_transaction',
+        userId: user.id
+      });
+      throw new Error('Failed to create transaction');
     }
 
-    console.log('Transaction created, starting payment processing:', transaction.id);
+    logger.info('Transaction created', {
+      action: 'create_transaction',
+      userId: user.id,
+      status: 'success'
+    });
 
     // Step 3: Pre-validate wallet balance before processing
-    console.log('Validating wallet balance...');
+    logger.info('Validating wallet balance', {
+      action: 'validate_balance',
+      userId: user.id
+    });
     if (paymentRequest.transactionType === 'send') {
       const { data: wallet, error: walletError } = await supabaseClient
         .from('wallets')
@@ -92,7 +118,10 @@ serve(async (req) => {
         .single();
 
       if (walletError || !wallet) {
-        console.error('Wallet fetch error:', walletError);
+        logger.error('Wallet fetch failed', walletError, {
+          action: 'validate_balance',
+          userId: user.id
+        });
         
         // Mark transaction as failed
         const { error: failError } = await supabaseClient.rpc('fail_transaction', {
@@ -101,7 +130,10 @@ serve(async (req) => {
         });
         
         if (failError) {
-          console.error('Failed to mark transaction as failed:', failError);
+          logger.error('Failed to mark transaction as failed', failError, {
+            action: 'fail_transaction',
+            userId: user.id
+          });
         }
         
         throw new Error('Wallet not found');
@@ -109,7 +141,11 @@ serve(async (req) => {
 
       const totalAmount = paymentRequest.amount + fee;
       if (wallet.balance < totalAmount) {
-        console.log(`Insufficient balance: ${wallet.balance} < ${totalAmount}`);
+        logger.info('Insufficient balance detected', {
+          action: 'validate_balance',
+          userId: user.id,
+          status: 'insufficient'
+        });
         
         // Mark transaction as failed
         const { error: failError } = await supabaseClient.rpc('fail_transaction', {
@@ -118,7 +154,10 @@ serve(async (req) => {
         });
         
         if (failError) {
-          console.error('Failed to mark transaction as failed:', failError);
+          logger.error('Failed to mark transaction as failed', failError, {
+            action: 'fail_transaction',
+            userId: user.id
+          });
         }
         
         throw new Error('Insufficient balance');
@@ -126,7 +165,10 @@ serve(async (req) => {
     }
 
     // Step 4: Deduct balance FIRST (before marking as completed)
-    console.log('Deducting balance from wallet...');
+    logger.info('Processing balance deduction', {
+      action: 'deduct_balance',
+      userId: user.id
+    });
     if (paymentRequest.transactionType === 'send') {
       const { error: deductError } = await supabaseClient.rpc('update_wallet_balance', {
         wallet_id: paymentRequest.fromWalletId,
@@ -134,41 +176,66 @@ serve(async (req) => {
       });
 
       if (deductError) {
-        console.error('Balance deduction failed:', deductError);
+        logger.error('Balance deduction failed', deductError, {
+          action: 'deduct_balance',
+          userId: user.id,
+          status: 'failed'
+        });
         
         // Mark transaction as failed
         const { error: failError } = await supabaseClient.rpc('fail_transaction', {
           transaction_id: transaction.id,
-          failure_reason: `Balance deduction failed: ${deductError.message}`
+          failure_reason: 'Balance deduction failed'
         });
         
         if (failError) {
-          console.error('Failed to mark transaction as failed:', failError);
+          logger.error('Failed to mark transaction as failed', failError, {
+            action: 'fail_transaction',
+            userId: user.id
+          });
         }
         
         throw new Error('Insufficient balance or wallet locked');
       }
-      console.log('Balance deducted successfully');
+      logger.info('Balance deducted successfully', {
+        action: 'deduct_balance',
+        userId: user.id,
+        status: 'success'
+      });
     }
 
     // Step 5: Simulate payment processing (blockchain/UPI confirmation)
-    console.log('Processing payment confirmation...');
+    logger.info('Processing payment confirmation', {
+      action: 'process_confirmation',
+      userId: user.id
+    });
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Step 6: ONLY NOW mark transaction as completed
-    console.log('Marking transaction as completed...');
+    logger.info('Marking transaction as completed', {
+      action: 'complete_transaction',
+      userId: user.id
+    });
     const { error: completeError } = await supabaseClient.rpc('complete_transaction', {
       transaction_id: transaction.id
     });
 
     if (completeError) {
-      console.error('CRITICAL: Balance deducted but transaction completion failed:', completeError);
+      logger.error('Transaction completion failed', completeError, {
+        action: 'complete_transaction',
+        userId: user.id,
+        status: 'critical'
+      });
       // This is a critical error - balance was deducted but transaction not marked complete
       // In production, this should trigger alerts and manual intervention
       throw new Error('Transaction completion failed - please contact support');
     }
 
-    console.log('Payment processed successfully:', transaction.id);
+    logger.info('Payment processed successfully', {
+      action: 'process_payment',
+      userId: user.id,
+      status: 'completed'
+    });
 
     return new Response(
       JSON.stringify({
@@ -182,7 +249,10 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error('Payment processing error:', error);
+    logger.error('Payment processing error', error as Error, {
+      action: 'process_payment',
+      status: 'error'
+    });
     
     // Provide safe, user-friendly error messages
     let safeMessage = 'Payment processing failed. Please try again.';

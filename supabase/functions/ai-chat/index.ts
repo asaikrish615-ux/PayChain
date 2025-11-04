@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,7 +27,10 @@ serve(async (req) => {
     // Verify authentication - CRITICAL for security
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      console.log('Unauthorized AI chat attempt');
+      logger.info('Unauthorized AI chat attempt', {
+        action: 'auth_check',
+        status: 'unauthorized'
+      });
       return new Response(
         JSON.stringify({ 
           error: 'Authentication required', 
@@ -39,16 +43,27 @@ serve(async (req) => {
       );
     }
 
-    console.log('AI chat request from user:', user.id);
+    logger.info('AI chat request received', {
+      action: 'ai_chat',
+      userId: user.id
+    });
 
     const { messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
+      logger.error('API key not configured', new Error('Missing LOVABLE_API_KEY'), {
+        action: 'ai_chat',
+        status: 'config_error'
+      });
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Processing AI chat request with", messages.length, "messages");
+    logger.info('Processing AI chat request', {
+      action: 'ai_chat',
+      userId: user.id,
+      messageCount: messages.length
+    });
 
     const systemPrompt = `You are PayChain AI Assistant, a helpful and knowledgeable expert in blockchain technology, cryptocurrency, and UPI payments.
 
@@ -86,7 +101,11 @@ Be concise, friendly, and helpful. Use emojis occasionally to make conversations
 
     if (!response.ok) {
       if (response.status === 429) {
-        console.error("Rate limit exceeded");
+        logger.error('AI gateway rate limit exceeded', new Error('Rate limit'), {
+          action: 'ai_chat',
+          userId: user.id,
+          status: 'rate_limited'
+        });
         return new Response(
           JSON.stringify({ error: "Rate limits exceeded, please try again later." }),
           {
@@ -96,7 +115,11 @@ Be concise, friendly, and helpful. Use emojis occasionally to make conversations
         );
       }
       if (response.status === 402) {
-        console.error("Payment required");
+        logger.error('AI gateway payment required', new Error('Payment required'), {
+          action: 'ai_chat',
+          userId: user.id,
+          status: 'payment_required'
+        });
         return new Response(
           JSON.stringify({ error: "Payment required, please add funds to your workspace." }),
           {
@@ -106,8 +129,11 @@ Be concise, friendly, and helpful. Use emojis occasionally to make conversations
         );
       }
       
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      logger.error('AI gateway error', new Error('Gateway error'), {
+        action: 'ai_chat',
+        userId: user.id,
+        status: 'gateway_error'
+      });
       return new Response(
         JSON.stringify({ error: "AI gateway error" }),
         {
@@ -121,7 +147,10 @@ Be concise, friendly, and helpful. Use emojis occasionally to make conversations
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {
-    console.error('Error in ai-chat function:', error);
+    logger.error('AI chat function error', error as Error, {
+      action: 'ai_chat',
+      status: 'error'
+    });
     return new Response(
       JSON.stringify({ 
         error: 'An error occurred while processing your request. Please try again.',
