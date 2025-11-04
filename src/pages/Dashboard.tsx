@@ -10,6 +10,7 @@ import { Services } from "@/components/Services";
 import { AIChat } from "@/components/AIChat";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Portfolio } from "@/components/Portfolio";
+import { FinancialInsights } from "@/components/FinancialInsights";
 import { User as UserIcon, History } from "lucide-react";
 
 function DashboardContent() {
@@ -102,6 +103,9 @@ function DashboardContent() {
 
         {/* Wallet Dashboard */}
         <WalletDashboard />
+
+        {/* AI Financial Insights - Predictive Analytics */}
+        <FinancialInsights />
 
         {/* Services Section */}
         <Services />
