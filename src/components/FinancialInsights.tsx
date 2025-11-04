@@ -30,6 +30,23 @@ export const FinancialInsights = () => {
   const [predictedBalance, setPredictedBalance] = useState<number | null>(null);
   const [daysUntilLow, setDaysUntilLow] = useState<number | null>(null);
 
+  // Sanitize values for AI prompts to prevent injection attacks
+  const sanitizeForPrompt = (value: any): string => {
+    const str = String(value);
+    
+    // Remove newlines and control characters
+    let sanitized = str.replace(/[\n\r\t]/g, ' ');
+    
+    // Remove non-alphanumeric except basic punctuation
+    sanitized = sanitized.replace(/[^\w\s.,()-]/g, '');
+    
+    // Limit length
+    sanitized = sanitized.slice(0, 100);
+    
+    // Trim whitespace
+    return sanitized.trim();
+  };
+
   const analyzeFinancialHealth = async () => {
     setIsAnalyzing(true);
     try {
@@ -78,29 +95,32 @@ export const FinancialInsights = () => {
       setPredictedBalance(predictedBalanceIn7Days);
       setDaysUntilLow(daysLeft);
 
-      // Generate AI-powered insights
+      // Generate AI-powered insights with sanitized data
       const { data: aiResponse, error: aiError } = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: `Analyze this financial data and provide 3-4 brief, actionable insights:
-          - Current balance: ${currentBalance} ${wallets.currency}
-          - Weekly spending: ${weeklySpending}
-          - Monthly spending: ${monthlySpending}
-          - Daily average: ${dailyAverage.toFixed(2)}
-          - Days until low balance: ${daysLeft}
-          - Predicted balance in 7 days: ${predictedBalanceIn7Days.toFixed(2)}
-          
-          Provide insights in this exact JSON format:
-          [
-            {
-              "type": "warning|info|success|danger",
-              "title": "Brief title",
-              "description": "One sentence description",
-              "prediction": "Specific prediction if applicable",
-              "action": "One actionable recommendation"
-            }
-          ]
-          
-          Focus on: spending patterns, budget alerts, savings opportunities, and cash flow predictions.`
+          messages: [{
+            role: 'user',
+            content: `Analyze this financial data and provide 3-4 brief, actionable insights:
+            - Current balance: ${sanitizeForPrompt(currentBalance)} ${sanitizeForPrompt(wallets.currency)}
+            - Weekly spending: ${sanitizeForPrompt(weeklySpending)}
+            - Monthly spending: ${sanitizeForPrompt(monthlySpending)}
+            - Daily average: ${sanitizeForPrompt(dailyAverage.toFixed(2))}
+            - Days until low balance: ${sanitizeForPrompt(daysLeft)}
+            - Predicted balance in 7 days: ${sanitizeForPrompt(predictedBalanceIn7Days.toFixed(2))}
+            
+            Provide insights in this exact JSON format:
+            [
+              {
+                "type": "warning|info|success|danger",
+                "title": "Brief title",
+                "description": "One sentence description",
+                "prediction": "Specific prediction if applicable",
+                "action": "One actionable recommendation"
+              }
+            ]
+            
+            Focus on: spending patterns, budget alerts, savings opportunities, and cash flow predictions.`
+          }]
         }
       });
 

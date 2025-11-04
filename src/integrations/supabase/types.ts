@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_chat_usage: {
+        Row: {
+          created_at: string
+          daily_requests: number
+          daily_reset_at: string
+          daily_tokens: number
+          last_request_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_requests?: number
+          daily_reset_at?: string
+          daily_tokens?: number
+          last_request_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_requests?: number
+          daily_reset_at?: string
+          daily_tokens?: number
+          last_request_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exchange_rates: {
         Row: {
           from_currency: string
@@ -222,7 +249,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ai_usage_alerts: {
+        Row: {
+          alert_level: string | null
+          daily_requests: number | null
+          daily_tokens: number | null
+          last_request_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          alert_level?: never
+          daily_requests?: number | null
+          daily_tokens?: number | null
+          last_request_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          alert_level?: never
+          daily_requests?: number | null
+          daily_tokens?: number | null
+          last_request_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       complete_transaction: {

@@ -101,6 +101,10 @@ async function streamChat({
   onDone();
 }
 
+// Constants for client-side validation
+const MAX_MESSAGES = 50;
+const MAX_MESSAGE_LENGTH = 2000;
+
 export const AIChat = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -121,6 +125,17 @@ export const AIChat = () => {
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
+
+    // Client-side validation
+    if (input.length > MAX_MESSAGE_LENGTH) {
+      toast.error(`Message too long (max ${MAX_MESSAGE_LENGTH} characters)`);
+      return;
+    }
+
+    if (messages.length >= MAX_MESSAGES) {
+      toast.error('Conversation too long. Please start a new chat.');
+      return;
+    }
 
     const userMsg: Message = { role: "user", content: input };
     setMessages((prev) => [...prev, userMsg]);
@@ -147,9 +162,22 @@ export const AIChat = () => {
         onDelta: updateAssistant,
         onDone: () => setIsLoading(false),
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Chat error:", error);
-      toast.error("Failed to send message. Please try again.");
+      
+      // Handle specific error codes
+      if (error.message?.includes('RATE_LIMIT_EXCEEDED') || error.message?.includes('rate limit')) {
+        toast.error('Daily message limit reached. Please try again tomorrow.');
+      } else if (error.message?.includes('REQUEST_TIMEOUT') || error.message?.includes('timeout')) {
+        toast.error('Request timed out. Please try again.');
+      } else if (error.message?.includes('Invalid request') || error.message?.includes('validation')) {
+        toast.error('Message validation failed. Please check your input.');
+      } else {
+        toast.error('Failed to send message. Please try again.');
+      }
+      
+      // Remove the user message that failed
+      setMessages((prev) => prev.slice(0, -1));
       setIsLoading(false);
     }
   };
