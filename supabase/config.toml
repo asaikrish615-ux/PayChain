@@ -2,3 +2,6 @@ project_id = "tteegxcshhglndwipbud"
 
 [functions.ai-chat]
 verify_jwt = true
+
+[functions.financial-insights]
+verify_jwt = true
