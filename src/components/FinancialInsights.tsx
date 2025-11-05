@@ -95,47 +95,107 @@ export const FinancialInsights = () => {
       setPredictedBalance(predictedBalanceIn7Days);
       setDaysUntilLow(daysLeft);
 
-      // Generate AI-powered insights with sanitized data
-      const { data: aiResponse, error: aiError } = await supabase.functions.invoke('ai-chat', {
-        body: {
-          messages: [{
-            role: 'user',
-            content: `Analyze this financial data and provide 3-4 brief, actionable insights:
-            - Current balance: ${sanitizeForPrompt(currentBalance)} ${sanitizeForPrompt(wallets.currency)}
-            - Weekly spending: ${sanitizeForPrompt(weeklySpending)}
-            - Monthly spending: ${sanitizeForPrompt(monthlySpending)}
-            - Daily average: ${sanitizeForPrompt(dailyAverage.toFixed(2))}
-            - Days until low balance: ${sanitizeForPrompt(daysLeft)}
-            - Predicted balance in 7 days: ${sanitizeForPrompt(predictedBalanceIn7Days.toFixed(2))}
-            
-            Provide insights in this exact JSON format:
-            [
-              {
-                "type": "warning|info|success|danger",
-                "title": "Brief title",
-                "description": "One sentence description",
-                "prediction": "Specific prediction if applicable",
-                "action": "One actionable recommendation"
-              }
-            ]
-            
-            Focus on: spending patterns, budget alerts, savings opportunities, and cash flow predictions.`
-          }]
-        }
-      });
-
-      if (aiError) throw aiError;
-
-      // Parse AI response
+      // Generate AI-powered insights with sanitized data - use streaming
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+      
       let aiInsights: Insight[] = [];
+      let fullResponse = '';
+      
       try {
-        const responseText = aiResponse.response || aiResponse.message || '';
-        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          aiInsights = JSON.parse(jsonMatch[0]);
+        const resp = await fetch(CHAT_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ 
+            messages: [{
+              role: 'user',
+              content: `Analyze this financial data and provide 3-4 brief, actionable insights:
+- Current balance: ${sanitizeForPrompt(currentBalance)} ${sanitizeForPrompt(wallets.currency)}
+- Weekly spending: ${sanitizeForPrompt(weeklySpending)}
+- Monthly spending: ${sanitizeForPrompt(monthlySpending)}
+- Daily average: ${sanitizeForPrompt(dailyAverage.toFixed(2))}
+- Days until low balance: ${sanitizeForPrompt(daysLeft)}
+- Predicted balance in 7 days: ${sanitizeForPrompt(predictedBalanceIn7Days.toFixed(2))}
+
+Provide insights in this exact JSON format:
+[
+  {
+    "type": "warning|info|success|danger",
+    "title": "Brief title",
+    "description": "One sentence description",
+    "prediction": "Specific prediction if applicable",
+    "action": "One actionable recommendation"
+  }
+]
+
+Focus on: spending patterns, budget alerts, savings opportunities, and cash flow predictions.`
+            }]
+          }),
+        });
+
+        if (resp.status === 429) {
+          throw new Error('Rate limit exceeded. Please try again later.');
         }
-      } catch (e) {
-        console.error('Failed to parse AI insights:', e);
+
+        if (resp.status === 402) {
+          throw new Error('AI usage limit reached. Please contact support.');
+        }
+
+        if (!resp.ok || !resp.body) {
+          throw new Error('Failed to get AI insights');
+        }
+
+        // Read the streaming response
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let textBuffer = "";
+        let streamDone = false;
+
+        while (!streamDone) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          textBuffer += decoder.decode(value, { stream: true });
+
+          let newlineIndex: number;
+          while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+            let line = textBuffer.slice(0, newlineIndex);
+            textBuffer = textBuffer.slice(newlineIndex + 1);
+
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (line.startsWith(":") || line.trim() === "") continue;
+            if (!line.startsWith("data: ")) continue;
+
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") {
+              streamDone = true;
+              break;
+            }
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+              if (content) fullResponse += content;
+            } catch {
+              textBuffer = line + "\n" + textBuffer;
+              break;
+            }
+          }
+        }
+
+        // Parse the complete response
+        try {
+          const jsonMatch = fullResponse.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            aiInsights = JSON.parse(jsonMatch[0]);
+          }
+        } catch (e) {
+          console.error('Failed to parse AI insights JSON:', e);
+        }
+      } catch (error: any) {
+        console.error('AI insights error:', error);
+        // Continue with rule-based insights even if AI fails
       }
 
       // Add rule-based insights
